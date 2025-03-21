@@ -9,16 +9,170 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_items: {
+        Row: {
+          author_id: string
+          average_rating: number | null
+          category_id: string | null
+          completion_rate: number | null
+          description: string | null
+          downloads: number
+          duration: number | null
+          file_size: number
+          file_url: string
+          id: string
+          last_modified: string
+          tags: string[] | null
+          thumbnail_url: string | null
+          title: string
+          type: Database["public"]["Enums"]["content_type"]
+          upload_date: string
+          views: number
+        }
+        Insert: {
+          author_id: string
+          average_rating?: number | null
+          category_id?: string | null
+          completion_rate?: number | null
+          description?: string | null
+          downloads?: number
+          duration?: number | null
+          file_size: number
+          file_url: string
+          id?: string
+          last_modified?: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title: string
+          type: Database["public"]["Enums"]["content_type"]
+          upload_date?: string
+          views?: number
+        }
+        Update: {
+          author_id?: string
+          average_rating?: number | null
+          category_id?: string | null
+          completion_rate?: number | null
+          description?: string | null
+          downloads?: number
+          duration?: number | null
+          file_size?: number
+          file_url?: string
+          id?: string
+          last_modified?: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["content_type"]
+          upload_date?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_items_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar: string | null
+          created_at: string
+          email: string
+          id: string
+          name: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+        }
+        Insert: {
+          avatar?: string | null
+          created_at?: string
+          email: string
+          id: string
+          name: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+        }
+        Update: {
+          avatar?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_instructor: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      content_type:
+        | "video"
+        | "audio"
+        | "document"
+        | "presentation"
+        | "spreadsheet"
+        | "scorm"
+        | "other"
+      user_role: "admin" | "instructor" | "student"
     }
     CompositeTypes: {
       [_ in never]: never

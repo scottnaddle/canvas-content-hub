@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,38 +10,65 @@ import { useToast } from "@/components/ui/use-toast";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        navigate('/dashboard');
+      }
+    };
+    
+    checkSession();
+  }, [navigate]);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    if (!email || !password) {
+      setError(t("auth.allFieldsRequired"));
       setIsLoading(false);
+      return;
+    }
+    
+    try {
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       
-      // Validation example
-      if (!email || !password) {
-        setError(t("auth.loginFailed"));
+      if (signInError) {
+        setError(signInError.message);
+        setIsLoading(false);
         return;
       }
       
-      // Show success toast
       toast({
         title: t("auth.loginSuccessful"),
-        description: "Redirecting to dashboard...",
+        description: t("auth.redirectingToDashboard"),
       });
       
-      // Redirect would happen here in a real app
-    }, 1500);
+      // Navigate to dashboard after successful login
+      navigate("/dashboard");
+    } catch (err) {
+      console.error("Login error:", err);
+      setError(t("auth.loginFailed"));
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   const handleSocialLogin = (provider: string) => {
@@ -63,7 +90,7 @@ const Login = () => {
                 {t("auth.login")}
               </CardTitle>
               <CardDescription className="text-center">
-                Enter your credentials to access your account
+                {t("auth.enterCredentials")}
               </CardDescription>
             </CardHeader>
             
