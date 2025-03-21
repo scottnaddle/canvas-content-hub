@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { PlusCircle, FileUp, Grid3X3, FileSpreadsheet, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,67 +11,63 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useLanguage } from "@/contexts/LanguageContext";
 import ContentCard from "@/components/content/ContentCard";
+import { useAuth } from "@/hooks/useAuth";
+import { useRecentContent, usePopularContent } from "@/hooks/useContent";
+import ContentUploader from "@/components/content/ContentUploader";
 
 const Dashboard = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, profile, isLoading: isAuthLoading } = useAuth();
+  const navigate = useNavigate();
+  const [isUploaderOpen, setIsUploaderOpen] = useState(false);
+  
+  const { data: recentContent, isLoading: isRecentLoading } = useRecentContent(3);
+  const { data: popularContent, isLoading: isPopularLoading } = usePopularContent(3);
   
   useEffect(() => {
-    // Simulate data loading
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, []);
-  
-  // Placeholder data
-  const recentContent = [
-    {
-      id: "1",
-      title: "Introduction to Canvas LMS",
-      type: "video" as const,
-      thumbnailUrl: "https://images.unsplash.com/photo-1588702547923-7093a6c3ba33?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTl8fGxlYXJuaW5nJTIwb25saW5lfGVufDB8fDB8fHww",
-      views: 248,
-      uploadDate: new Date("2023-11-10")
-    },
-    {
-      id: "2",
-      title: "Best Practices for Online Teaching",
-      type: "document" as const,
-      thumbnailUrl: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTR8fGRvY3VtZW50fGVufDB8fDB8fHww",
-      views: 186,
-      uploadDate: new Date("2023-12-05")
-    },
-    {
-      id: "3",
-      title: "Educational Assessment Techniques",
-      type: "presentation" as const,
-      thumbnailUrl: "https://images.unsplash.com/photo-1616628188859-7a11abb6fcc9?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8cHJlc2VudGF0aW9ufGVufDB8fDB8fHww",
-      views: 124,
-      uploadDate: new Date("2024-01-15")
+    // Check if user is authenticated
+    if (!isAuthLoading && !user) {
+      toast({
+        title: "인증 필요",
+        description: "대시보드를 보려면 로그인이 필요합니다.",
+        variant: "destructive",
+      });
+      navigate("/login");
     }
-  ];
+  }, [user, isAuthLoading, navigate, toast]);
   
+  const isLoading = isAuthLoading || isRecentLoading;
+  
+  // Stats for dashboard
   const statsCards = [
     {
       title: t("dashboard.totalContent"),
-      value: "42",
+      value: recentContent ? recentContent.length.toString() : "0",
       description: "Content items",
       icon: <FileSpreadsheet className="h-6 w-6 text-primary" />,
     },
     {
       title: t("dashboard.totalViews"),
-      value: "1,284",
-      description: "Last 30 days",
+      value: recentContent 
+        ? recentContent.reduce((sum, item) => sum + item.views, 0).toString() 
+        : "0",
+      description: "Total views",
       icon: <Grid3X3 className="h-6 w-6 text-primary" />,
     },
     {
       title: t("dashboard.completionRate"),
-      value: "68%",
+      value: recentContent && recentContent.some(item => item.completion_rate !== null)
+        ? `${Math.round(recentContent.reduce((sum, item) => 
+            sum + (item.completion_rate || 0), 0) / 
+            recentContent.filter(item => item.completion_rate !== null).length)}%`
+        : "N/A",
       description: "Average completion",
-      progress: 68,
+      progress: recentContent && recentContent.some(item => item.completion_rate !== null)
+        ? Math.round(recentContent.reduce((sum, item) => 
+            sum + (item.completion_rate || 0), 0) / 
+            recentContent.filter(item => item.completion_rate !== null).length)
+        : 0,
       icon: <Upload className="h-6 w-6 text-primary" />,
     },
   ];
@@ -85,16 +81,16 @@ const Dashboard = () => {
           {/* Page Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">{t("dashboard.welcome", { name: "User" })}</h1>
-              <p className="text-muted-foreground">Here's an overview of your content and activities</p>
+              <h1 className="text-3xl font-bold tracking-tight">
+                {t("dashboard.welcome", { name: profile?.name || "사용자" })}
+              </h1>
+              <p className="text-muted-foreground">콘텐츠와 활동에 대한 개요입니다</p>
             </div>
             <div className="mt-4 md:mt-0 flex space-x-2">
-              <Link to="/content-library">
-                <Button className="flex items-center gap-2">
-                  <PlusCircle className="h-4 w-4" />
-                  <span>{t("content.upload.title")}</span>
-                </Button>
-              </Link>
+              <Button className="flex items-center gap-2" onClick={() => setIsUploaderOpen(true)}>
+                <PlusCircle className="h-4 w-4" />
+                <span>{t("content.upload.title")}</span>
+              </Button>
             </div>
           </div>
           
@@ -111,7 +107,7 @@ const Dashboard = () => {
                 <CardContent>
                   <div className="text-2xl font-bold">{card.value}</div>
                   <p className="text-xs text-muted-foreground">{card.description}</p>
-                  {card.progress && (
+                  {card.progress !== undefined && (
                     <Progress
                       value={card.progress}
                       className="h-2 mt-2"
@@ -128,12 +124,12 @@ const Dashboard = () => {
             <Tabs defaultValue="recent" className="md:col-span-5">
               <div className="flex items-center justify-between mb-4">
                 <TabsList>
-                  <TabsTrigger value="recent">Recent</TabsTrigger>
-                  <TabsTrigger value="popular">Popular</TabsTrigger>
-                  <TabsTrigger value="drafts">Drafts</TabsTrigger>
+                  <TabsTrigger value="recent">최근</TabsTrigger>
+                  <TabsTrigger value="popular">인기</TabsTrigger>
+                  <TabsTrigger value="drafts">임시 저장</TabsTrigger>
                 </TabsList>
                 <Link to="/content-library" className="text-sm text-primary hover:underline">
-                  View all →
+                  모두 보기 →
                 </Link>
               </div>
               
@@ -150,36 +146,55 @@ const Dashboard = () => {
                       </Card>
                     ))}
                   </div>
-                ) : (
+                ) : recentContent && recentContent.length > 0 ? (
                   <div className="grid gap-4 md:grid-cols-3">
                     {recentContent.map((content) => (
                       <ContentCard key={content.id} content={content} />
                     ))}
                   </div>
+                ) : (
+                  <Card className="p-8 text-center">
+                    <p className="text-muted-foreground mb-4">아직 업로드한 콘텐츠가 없습니다.</p>
+                    <Button onClick={() => setIsUploaderOpen(true)}>
+                      첫 번째 콘텐츠 업로드
+                    </Button>
+                  </Card>
                 )}
               </TabsContent>
               
               <TabsContent value="popular" className="m-0">
-                <div className="grid gap-4 md:grid-cols-3">
-                  {/* Placeholder content for other tabs */}
-                  <Card className="relative group overflow-hidden">
-                    <div className="aspect-video bg-muted rounded-t-md flex items-center justify-center text-muted-foreground">
-                      Popular content will appear here
-                    </div>
-                    <CardContent className="p-4">
-                      <div className="h-4 rounded w-3/4 mb-2 bg-muted"></div>
-                      <div className="h-3 rounded w-1/2 bg-muted"></div>
-                    </CardContent>
+                {isPopularLoading ? (
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {[1, 2, 3].map((i) => (
+                      <Card key={i} className="animate-pulse">
+                        <div className="aspect-video bg-muted rounded-t-md"></div>
+                        <CardContent className="p-4">
+                          <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                          <div className="h-3 bg-muted rounded w-1/2"></div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : popularContent && popularContent.length > 0 ? (
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {popularContent.map((content) => (
+                      <ContentCard key={content.id} content={content} />
+                    ))}
+                  </div>
+                ) : (
+                  <Card className="p-8 text-center">
+                    <p className="text-muted-foreground">
+                      인기 콘텐츠가 아직 없습니다. 더 많은 콘텐츠를 업로드하세요.
+                    </p>
                   </Card>
-                </div>
+                )}
               </TabsContent>
               
               <TabsContent value="drafts" className="m-0">
                 <div className="grid gap-4 md:grid-cols-3">
-                  {/* Placeholder content for other tabs */}
                   <Card className="relative group overflow-hidden">
                     <div className="aspect-video bg-muted rounded-t-md flex items-center justify-center text-muted-foreground">
-                      Draft content will appear here
+                      임시 저장 기능은 곧 제공됩니다
                     </div>
                     <CardContent className="p-4">
                       <div className="h-4 rounded w-3/4 mb-2 bg-muted"></div>
@@ -195,7 +210,7 @@ const Dashboard = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">{t("dashboard.recentActivity")}</CardTitle>
-                  <CardDescription>Latest actions and updates</CardDescription>
+                  <CardDescription>최신 활동 및 업데이트</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {isLoading ? (
@@ -210,52 +225,46 @@ const Dashboard = () => {
                         </div>
                       ))}
                     </div>
-                  ) : (
+                  ) : recentContent && recentContent.length > 0 ? (
                     <div className="space-y-4">
-                      <div className="flex items-start gap-3">
-                        <div className="h-8 w-8 rounded-full bg-blue-100 text-primary flex items-center justify-center">
-                          <FileUp className="h-4 w-4" />
+                      {recentContent.map((content, index) => (
+                        <div key={content.id} className="flex items-start gap-3">
+                          <div className="h-8 w-8 rounded-full bg-blue-100 text-primary flex items-center justify-center">
+                            <FileUp className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">
+                              {index === 0 ? "새 콘텐츠를 업로드했습니다" : "콘텐츠를 업로드했습니다"}: "{content.title}"
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(content.upload_date).toLocaleDateString()}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium">You uploaded "Introduction to Canvas LMS"</p>
-                          <p className="text-xs text-muted-foreground">2 hours ago</p>
-                        </div>
-                      </div>
+                      ))}
                       
-                      <div className="flex items-start gap-3">
-                        <div className="h-8 w-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
-                          <Grid3X3 className="h-4 w-4" />
+                      {recentContent.length > 0 && (
+                        <div className="flex items-start gap-3">
+                          <div className="h-8 w-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+                            <Grid3X3 className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">
+                              콘텐츠에 {recentContent.reduce((sum, item) => sum + item.views, 0)}회의 새로운 조회수가 있습니다
+                            </p>
+                            <p className="text-xs text-muted-foreground">최근 활동</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium">28 new views on your content</p>
-                          <p className="text-xs text-muted-foreground">Today</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-start gap-3">
-                        <div className="h-8 w-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
-                          <FileUp className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">You updated "Best Practices for Online Teaching"</p>
-                          <p className="text-xs text-muted-foreground">Yesterday</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-start gap-3">
-                        <div className="h-8 w-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
-                          <FileSpreadsheet className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">12 downloads of your documents</p>
-                          <p className="text-xs text-muted-foreground">This week</p>
-                        </div>
-                      </div>
+                      )}
                     </div>
+                  ) : (
+                    <p className="text-center text-muted-foreground py-4">
+                      아직 활동이 없습니다. 콘텐츠를 업로드해보세요!
+                    </p>
                   )}
                   
                   <Button variant="outline" className="w-full" size="sm">
-                    View All Activity
+                    모든 활동 보기
                   </Button>
                 </CardContent>
               </Card>
@@ -263,6 +272,11 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
+      
+      <ContentUploader 
+        isOpen={isUploaderOpen} 
+        onClose={() => setIsUploaderOpen(false)} 
+      />
       
       <Footer />
     </div>

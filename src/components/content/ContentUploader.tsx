@@ -1,15 +1,21 @@
 
 import { useState } from "react";
-import { Upload, X, File, FileText, Video, Music, FileSpreadsheet } from "lucide-react";
+import { Upload, X, File, FileText, Video, Music, FileSpreadsheet, Image } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
 import { formatFileSize } from "@/lib/i18n";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/hooks/useAuth";
+import { useStorage } from "@/hooks/useStorage";
+import { useAddContentItem, useCategories } from "@/hooks/useContent";
+import { ContentType } from "@/types/content";
+import { v4 as uuidv4 } from "uuid";
 
 interface ContentUploaderProps {
   isOpen: boolean;
@@ -19,10 +25,17 @@ interface ContentUploaderProps {
 const ContentUploader = ({ isOpen, onClose }: ContentUploaderProps) => {
   const { currentLanguage, t } = useLanguage();
   const { toast } = useToast();
+  const { user, profile } = useAuth();
+  const { uploadFile, uploadThumbnail, isUploading: isFileUploading } = useStorage();
+  const { mutateAsync: addContentItem, isPending: isAddingContent } = useAddContentItem();
+  const { data: categories, isLoading: isCategoriesLoading } = useCategories();
+  
   const [step, setStep] = useState<"upload" | "details">("upload");
   const [files, setFiles] = useState<File[]>([]);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const [contentDetails, setContentDetails] = useState({
     title: "",
@@ -30,6 +43,8 @@ const ContentUploader = ({ isOpen, onClose }: ContentUploaderProps) => {
     category: "",
     tags: "",
   });
+  
+  const isUploading = isFileUploading || isAddingContent;
   
   const maxFileSize = 100 * 1024 * 1024; // 100MB
   const supportedFormats = [
@@ -40,6 +55,16 @@ const ContentUploader = ({ isOpen, onClose }: ContentUploaderProps) => {
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
   ];
+  
+  const getContentTypeFromMimeType = (mimeType: string): ContentType => {
+    if (mimeType.startsWith("video/")) return "video";
+    if (mimeType.startsWith("audio/")) return "audio";
+    if (mimeType === "application/pdf") return "document";
+    if (mimeType.includes("spreadsheet")) return "spreadsheet";
+    if (mimeType.includes("presentation")) return "presentation";
+    if (mimeType.includes("document")) return "document";
+    return "other";
+  };
   
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -65,13 +90,30 @@ const ContentUploader = ({ isOpen, onClose }: ContentUploaderProps) => {
     }
   };
   
+  const handleThumbnailInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      if (file.type.startsWith("image/")) {
+        setThumbnailFile(file);
+        const objectUrl = URL.createObjectURL(file);
+        setThumbnailPreview(objectUrl);
+      } else {
+        toast({
+          title: "잘못된 파일 형식",
+          description: "썸네일은 이미지 파일이어야 합니다.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+  
   const handleFiles = (newFiles: File[]) => {
     const validFiles = newFiles.filter(file => {
       // Check file size
       if (file.size > maxFileSize) {
         toast({
-          title: "File too large",
-          description: `${file.name} exceeds the maximum file size of ${formatFileSize(maxFileSize, currentLanguage as any)}`,
+          title: "파일이 너무 큽니다",
+          description: `${file.name}은(는) 최대 파일 크기인 ${formatFileSize(maxFileSize, currentLanguage as any)}를 초과합니다`,
           variant: "destructive",
         });
         return false;
@@ -80,8 +122,8 @@ const ContentUploader = ({ isOpen, onClose }: ContentUploaderProps) => {
       // Check file type
       if (!supportedFormats.includes(file.type)) {
         toast({
-          title: "Unsupported file format",
-          description: `${file.name} is not a supported file type`,
+          title: "지원되지 않는 파일 형식",
+          description: `${file.name}은(는) 지원되지 않는 파일 형식입니다`,
           variant: "destructive",
         });
         return false;
@@ -105,6 +147,14 @@ const ContentUploader = ({ isOpen, onClose }: ContentUploaderProps) => {
     }
   };
   
+  const removeThumbnail = () => {
+    setThumbnailFile(null);
+    if (thumbnailPreview) {
+      URL.revokeObjectURL(thumbnailPreview);
+      setThumbnailPreview(null);
+    }
+  };
+  
   const getFileTypeIcon = (file: File) => {
     if (file.type.startsWith("video/")) {
       return <Video className="h-5 w-5" />;
@@ -122,8 +172,8 @@ const ContentUploader = ({ isOpen, onClose }: ContentUploaderProps) => {
   const handleContinue = () => {
     if (files.length === 0) {
       toast({
-        title: "No files selected",
-        description: "Please upload at least one file to continue",
+        title: "파일이 선택되지 않았습니다",
+        description: "계속하려면 최소 하나의 파일을 업로드하세요",
         variant: "destructive",
       });
       return;
@@ -140,31 +190,100 @@ const ContentUploader = ({ isOpen, onClose }: ContentUploaderProps) => {
     }));
   };
   
-  const handleUpload = () => {
-    if (!contentDetails.title) {
+  const handleUpload = async () => {
+    if (!user || !profile) {
       toast({
-        title: "Title required",
-        description: "Please enter a title for your content",
+        title: "인증 오류",
+        description: "콘텐츠를 업로드하려면 로그인해야 합니다.",
         variant: "destructive",
       });
       return;
     }
     
-    setIsUploading(true);
+    if (!contentDetails.title) {
+      toast({
+        title: "제목이 필요합니다",
+        description: "콘텐츠 제목을 입력해주세요",
+        variant: "destructive",
+      });
+      return;
+    }
     
-    // Simulate upload
-    setTimeout(() => {
-      setIsUploading(false);
+    try {
+      setUploadProgress(10);
+      
+      // 1. Upload the main file
+      const file = files[selectedFileIndex];
+      const contentType = getContentTypeFromMimeType(file.type);
+      
+      setUploadProgress(20);
+      
+      const uploadedFile = await uploadFile(file, {
+        contentType,
+        onProgress: (progress) => {
+          setUploadProgress(20 + Math.floor(progress * 0.6)); // 20% to 80%
+        }
+      });
+      
+      if (!uploadedFile) {
+        throw new Error("파일 업로드에 실패했습니다");
+      }
+      
+      setUploadProgress(80);
+      
+      // 2. Upload thumbnail if provided
+      let thumbnailUrl = null;
+      if (thumbnailFile) {
+        const uploadedThumbnail = await uploadThumbnail(thumbnailFile);
+        thumbnailUrl = uploadedThumbnail?.url || null;
+      }
+      
+      setUploadProgress(90);
+      
+      // 3. Create content item in database
+      const tagsArray = contentDetails.tags
+        ? contentDetails.tags.split(',').map(tag => tag.trim())
+        : [];
+        
+      await addContentItem({
+        id: uuidv4(),
+        title: contentDetails.title,
+        description: contentDetails.description || null,
+        type: contentType,
+        file_url: uploadedFile.url,
+        thumbnail_url: thumbnailUrl,
+        file_size: uploadedFile.size,
+        category_id: contentDetails.category || null,
+        tags: tagsArray.length > 0 ? tagsArray : null,
+        author_id: profile.id,
+      });
+      
+      setUploadProgress(100);
+      
       toast({
         title: t("content.upload.success"),
-        description: `"${contentDetails.title}" has been uploaded successfully.`,
+        description: `"${contentDetails.title}" 업로드가 성공적으로 완료되었습니다.`,
       });
       
       // Reset and close
       setFiles([]);
+      setThumbnailFile(null);
+      if (thumbnailPreview) {
+        URL.revokeObjectURL(thumbnailPreview);
+        setThumbnailPreview(null);
+      }
       setStep("upload");
+      setUploadProgress(0);
       onClose();
-    }, 2000);
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast({
+        title: "업로드 오류",
+        description: error instanceof Error ? error.message : "업로드 중 오류가 발생했습니다",
+        variant: "destructive",
+      });
+      setUploadProgress(0);
+    }
   };
   
   const handleBack = () => {
@@ -175,7 +294,13 @@ const ContentUploader = ({ isOpen, onClose }: ContentUploaderProps) => {
     <Dialog open={isOpen} onOpenChange={(open) => {
       if (!open) {
         setFiles([]);
+        setThumbnailFile(null);
+        if (thumbnailPreview) {
+          URL.revokeObjectURL(thumbnailPreview);
+          setThumbnailPreview(null);
+        }
         setStep("upload");
+        setUploadProgress(0);
         onClose();
       }
     }}>
@@ -183,9 +308,19 @@ const ContentUploader = ({ isOpen, onClose }: ContentUploaderProps) => {
         <DialogHeader>
           <DialogTitle>{t("content.upload.title")}</DialogTitle>
           <DialogDescription>
-            Upload and manage your learning content
+            학습 콘텐츠를 업로드하고 관리하세요
           </DialogDescription>
         </DialogHeader>
+        
+        {uploadProgress > 0 && (
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>업로드 중...</span>
+              <span>{uploadProgress}%</span>
+            </div>
+            <Progress value={uploadProgress} className="h-2" />
+          </div>
+        )}
         
         {step === "upload" ? (
           <div className="space-y-4">
@@ -210,7 +345,7 @@ const ContentUploader = ({ isOpen, onClose }: ContentUploaderProps) => {
                 variant="outline" 
                 onClick={() => document.getElementById("file-upload")?.click()}
               >
-                Browse Files
+                파일 찾아보기
               </Button>
               <input
                 id="file-upload"
@@ -218,7 +353,7 @@ const ContentUploader = ({ isOpen, onClose }: ContentUploaderProps) => {
                 multiple
                 className="hidden"
                 onChange={handleFileInput}
-                accept=".mp4,.webm,.mp3,.wav,.pdf,.docx,.pptx,.xlsx,.scorm"
+                accept=".mp4,.webm,.mp3,.wav,.pdf,.docx,.pptx,.xlsx"
               />
             </div>
             
@@ -226,7 +361,7 @@ const ContentUploader = ({ isOpen, onClose }: ContentUploaderProps) => {
             {files.length > 0 && (
               <div className="border rounded-lg overflow-hidden">
                 <div className="bg-muted/40 px-4 py-2 font-medium text-sm">
-                  Selected Files ({files.length})
+                  선택된 파일 ({files.length})
                 </div>
                 <div className="divide-y">
                   {files.map((file, index) => (
@@ -264,7 +399,7 @@ const ContentUploader = ({ isOpen, onClose }: ContentUploaderProps) => {
                 {t("common.cancel")}
               </Button>
               <Button onClick={handleContinue}>
-                Continue
+                계속
               </Button>
             </div>
           </div>
@@ -300,14 +435,20 @@ const ContentUploader = ({ isOpen, onClose }: ContentUploaderProps) => {
                     onValueChange={(value) => setContentDetails({ ...contentDetails, category: value })}
                   >
                     <SelectTrigger id="category">
-                      <SelectValue placeholder="Select category" />
+                      <SelectValue placeholder="카테고리 선택" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="tutorials">Tutorials</SelectItem>
-                      <SelectItem value="lectures">Lectures</SelectItem>
-                      <SelectItem value="assessments">Assessments</SelectItem>
-                      <SelectItem value="resources">Resources</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      {isCategoriesLoading ? (
+                        <SelectItem value="loading" disabled>로딩 중...</SelectItem>
+                      ) : categories && categories.length > 0 ? (
+                        categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>카테고리 없음</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -316,33 +457,85 @@ const ContentUploader = ({ isOpen, onClose }: ContentUploaderProps) => {
                   <Label htmlFor="tags">{t("content.tags")}</Label>
                   <Input
                     id="tags"
-                    placeholder="Enter tags separated by commas"
+                    placeholder="쉼표로 구분된 태그 입력"
                     value={contentDetails.tags}
                     onChange={(e) => setContentDetails({ ...contentDetails, tags: e.target.value })}
                   />
                 </div>
               </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="thumbnail">썸네일 이미지 (선택 사항)</Label>
+                <div className="flex items-start gap-4">
+                  <div 
+                    className="w-32 h-24 border rounded-md flex items-center justify-center overflow-hidden bg-muted/30 relative"
+                  >
+                    {thumbnailPreview ? (
+                      <>
+                        <img 
+                          src={thumbnailPreview} 
+                          alt="썸네일 미리보기" 
+                          className="w-full h-full object-cover"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-1 right-1 h-6 w-6 bg-background/80 rounded-full"
+                          onClick={removeThumbnail}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </>
+                    ) : (
+                      <Image className="h-8 w-8 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      className="mb-2"
+                      onClick={() => document.getElementById("thumbnail-upload")?.click()}
+                    >
+                      썸네일 업로드
+                    </Button>
+                    <input
+                      id="thumbnail-upload"
+                      type="file"
+                      className="hidden"
+                      onChange={handleThumbnailInput}
+                      accept="image/*"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      썸네일 이미지는 콘텐츠를 더 잘 식별하는 데 도움이 됩니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
             
             <div className="border rounded-md p-4 bg-muted/20">
-              <h4 className="font-medium mb-2">File Information</h4>
+              <h4 className="font-medium mb-2">파일 정보</h4>
               <div className="flex items-start gap-3">
-                {getFileTypeIcon(files[selectedFileIndex])}
+                {files.length > 0 && getFileTypeIcon(files[selectedFileIndex])}
                 <div>
-                  <p className="font-medium text-sm">{files[selectedFileIndex].name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatFileSize(files[selectedFileIndex].size, currentLanguage as any)}
-                  </p>
+                  {files.length > 0 && (
+                    <>
+                      <p className="font-medium text-sm">{files[selectedFileIndex].name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatFileSize(files[selectedFileIndex].size, currentLanguage as any)}
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
             
             <div className="flex justify-between">
-              <Button variant="outline" onClick={handleBack}>
-                Back
+              <Button variant="outline" onClick={handleBack} disabled={isUploading}>
+                뒤로
               </Button>
               <Button onClick={handleUpload} disabled={isUploading}>
-                {isUploading ? t("content.upload.uploading") : t("common.upload")}
+                {isUploading ? "업로드 중..." : "업로드"}
               </Button>
             </div>
           </div>

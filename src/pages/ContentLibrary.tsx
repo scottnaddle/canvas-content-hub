@@ -24,129 +24,96 @@ import Footer from "@/components/layout/Footer";
 import { useLanguage } from "@/contexts/LanguageContext";
 import ContentCard from "@/components/content/ContentCard";
 import ContentUploader from "@/components/content/ContentUploader";
+import { useAuth } from "@/hooks/useAuth";
+import { useContentItems, useCategories } from "@/hooks/useContent";
+import { ContentType, ContentWithDetails } from "@/types/content";
 
 const ContentLibrary = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
+  const { user, isAdmin, isInstructor } = useAuth();
+  const { data: contentItems, isLoading: isContentLoading } = useContentItems();
+  const { data: categories, isLoading: isCategoriesLoading } = useCategories();
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  useEffect(() => {
-    // Simulate data loading
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, []);
-  
-  // Placeholder data
-  const contentItems = [
-    {
-      id: "1",
-      title: "Introduction to Canvas LMS",
-      description: "A comprehensive guide to getting started with Canvas LMS, covering the basics and advanced features.",
-      type: "video" as const,
-      thumbnailUrl: "https://images.unsplash.com/photo-1588702547923-7093a6c3ba33?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTl8fGxlYXJuaW5nJTIwb25saW5lfGVufDB8fDB8fHww",
-      fileSize: 25600000,
-      duration: 1560,
-      category: "Tutorials",
-      tags: ["Canvas", "LMS", "Getting Started"],
-      author: "John Doe",
-      uploadDate: new Date("2023-11-10"),
-      lastModified: new Date("2023-11-15"),
-      views: 248,
-      downloads: 56,
-      completionRate: 72,
-    },
-    {
-      id: "2",
-      title: "Best Practices for Online Teaching",
-      description: "Learn about effective strategies for online teaching and engaging students in virtual classrooms.",
-      type: "document" as const,
-      thumbnailUrl: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTR8fGRvY3VtZW50fGVufDB8fDB8fHww",
-      fileSize: 3500000,
-      category: "Best Practices",
-      tags: ["Online Teaching", "Engagement", "Virtual Classroom"],
-      author: "Jane Smith",
-      uploadDate: new Date("2023-12-05"),
-      lastModified: new Date("2023-12-05"),
-      views: 186,
-      downloads: 92,
-    },
-    {
-      id: "3",
-      title: "Educational Assessment Techniques",
-      description: "A presentation on different assessment methods and how to implement them effectively in your courses.",
-      type: "presentation" as const,
-      thumbnailUrl: "https://images.unsplash.com/photo-1616628188859-7a11abb6fcc9?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8cHJlc2VudGF0aW9ufGVufDB8fDB8fHww",
-      fileSize: 8200000,
-      category: "Assessment",
-      tags: ["Evaluation", "Grading", "Feedback"],
-      author: "Robert Johnson",
-      uploadDate: new Date("2024-01-15"),
-      lastModified: new Date("2024-01-20"),
-      views: 124,
-      downloads: 67,
-    },
-    {
-      id: "4",
-      title: "Course Design Principles",
-      description: "Learn about instructional design principles for creating effective and engaging online courses.",
-      type: "document" as const,
-      thumbnailUrl: "https://images.unsplash.com/photo-1509475826633-fed577a2c71b?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8ZG9jdW1lbnR8ZW58MHx8MHx8fDA%3D",
-      fileSize: 4800000,
-      category: "Design",
-      tags: ["Course Design", "Instructional Design", "eLearning"],
-      author: "Sarah Wilson",
-      uploadDate: new Date("2024-01-28"),
-      lastModified: new Date("2024-01-28"),
-      views: 98,
-      downloads: 45,
-    },
-    {
-      id: "5",
-      title: "Student Engagement Strategies",
-      description: "Audio lecture discussing various strategies to increase student engagement in online and hybrid courses.",
-      type: "audio" as const,
-      thumbnailUrl: "https://images.unsplash.com/photo-1590602846037-3a93ae6f05b2?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8YXVkaW98ZW58MHx8MHx8fDA%3D",
-      fileSize: 12500000,
-      duration: 2580,
-      category: "Engagement",
-      tags: ["Student Engagement", "Motivation", "Active Learning"],
-      author: "Michael Brown",
-      uploadDate: new Date("2024-02-10"),
-      lastModified: new Date("2024-02-12"),
-      views: 76,
-      downloads: 32,
-    },
-    {
-      id: "6",
-      title: "Canvas Quiz Creation Tutorial",
-      description: "Step-by-step video tutorial on creating effective quizzes in Canvas LMS with various question types.",
-      type: "video" as const,
-      thumbnailUrl: "https://images.unsplash.com/photo-1602526215608-1e9aa040c87e?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MzB8fHZpZGVvJTIwdHV0b3JpYWx8ZW58MHx8MHx8fDA%3D",
-      fileSize: 32000000,
-      duration: 1860,
-      category: "Tutorials",
-      tags: ["Canvas", "Quiz", "Assessment"],
-      author: "David Lee",
-      uploadDate: new Date("2024-02-15"),
-      lastModified: new Date("2024-02-15"),
-      views: 112,
-      downloads: 28,
-      completionRate: 65,
-    }
-  ];
+  const [activeTab, setActiveTab] = useState<string>("all");
+  const [selectedTypes, setSelectedTypes] = useState<ContentType[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [dateFilter, setDateFilter] = useState<string>("any");
+  const [sortOrder, setSortOrder] = useState<string>("newest");
   
   // Filter function
-  const filteredContent = contentItems.filter(item => 
-    item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filterContent = (content: ContentWithDetails[]): ContentWithDetails[] => {
+    if (!content) return [];
+    
+    return content.filter(item => {
+      // Text search filter
+      const textMatch = 
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (item.tags && item.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())));
+      
+      // Type filter
+      const typeMatch = activeTab === "all" 
+        ? true
+        : (activeTab === "videos" && item.type === "video") ||
+          (activeTab === "documents" && item.type === "document") ||
+          (activeTab === "audio" && item.type === "audio") || 
+          (activeTab === "other" && !["video", "document", "audio"].includes(item.type));
+      
+      // Advanced filters
+      const advancedTypeMatch = selectedTypes.length === 0 || selectedTypes.includes(item.type);
+      
+      const advancedCategoryMatch = selectedCategories.length === 0 || 
+        (item.category_id && selectedCategories.includes(item.category_id));
+      
+      // Date filter
+      let dateMatch = true;
+      const now = new Date();
+      const uploadDate = new Date(item.upload_date);
+      
+      if (dateFilter === "week") {
+        const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        dateMatch = uploadDate >= oneWeekAgo;
+      } else if (dateFilter === "month") {
+        const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        dateMatch = uploadDate >= oneMonthAgo;
+      } else if (dateFilter === "year") {
+        const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        dateMatch = uploadDate >= oneYearAgo;
+      }
+      
+      return textMatch && typeMatch && advancedTypeMatch && advancedCategoryMatch && dateMatch;
+    });
+  };
+  
+  // Sort function
+  const sortContent = (content: ContentWithDetails[]): ContentWithDetails[] => {
+    if (!content) return [];
+    
+    return [...content].sort((a, b) => {
+      switch (sortOrder) {
+        case "newest":
+          return new Date(b.upload_date).getTime() - new Date(a.upload_date).getTime();
+        case "oldest":
+          return new Date(a.upload_date).getTime() - new Date(b.upload_date).getTime();
+        case "titleAZ":
+          return a.title.localeCompare(b.title);
+        case "titleZA":
+          return b.title.localeCompare(a.title);
+        case "mostViewed":
+          return b.views - a.views;
+        case "mostDownloaded":
+          return b.downloads - a.downloads;
+        default:
+          return 0;
+      }
+    });
+  };
+  
+  const filteredContent = sortContent(filterContent(contentItems || []));
   
   // Type icon function
   const getTypeIcon = (type: string) => {
@@ -158,10 +125,38 @@ const ContentLibrary = () => {
       case 'document':
         return <FileText className="h-4 w-4" />;
       case 'presentation':
+      case 'spreadsheet':
         return <FileSpreadsheet className="h-4 w-4" />;
       default:
         return <File className="h-4 w-4" />;
     }
+  };
+  
+  const handleTypeCheckboxChange = (type: ContentType) => {
+    setSelectedTypes(prev => {
+      if (prev.includes(type)) {
+        return prev.filter(t => t !== type);
+      } else {
+        return [...prev, type];
+      }
+    });
+  };
+  
+  const handleCategoryCheckboxChange = (categoryId: string) => {
+    setSelectedCategories(prev => {
+      if (prev.includes(categoryId)) {
+        return prev.filter(id => id !== categoryId);
+      } else {
+        return [...prev, categoryId];
+      }
+    });
+  };
+  
+  const clearFilters = () => {
+    setSelectedTypes([]);
+    setSelectedCategories([]);
+    setDateFilter("any");
+    setSearchQuery("");
   };
 
   return (
@@ -174,16 +169,18 @@ const ContentLibrary = () => {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">{t("library.title")}</h1>
-              <p className="text-muted-foreground">Browse, search and manage your learning content</p>
+              <p className="text-muted-foreground">학습 콘텐츠를 찾아보고, 검색하고, 관리하세요</p>
             </div>
             <div className="mt-4 md:mt-0">
-              <Button 
-                onClick={() => setIsUploaderOpen(true)}
-                className="animate-fade-in flex items-center gap-2"
-              >
-                <UploadCloud className="h-4 w-4" />
-                <span>{t("library.uploadNew")}</span>
-              </Button>
+              {(isAdmin || isInstructor) && (
+                <Button 
+                  onClick={() => setIsUploaderOpen(true)}
+                  className="animate-fade-in flex items-center gap-2"
+                >
+                  <UploadCloud className="h-4 w-4" />
+                  <span>{t("library.uploadNew")}</span>
+                </Button>
+              )}
             </div>
           </div>
           
@@ -211,7 +208,7 @@ const ContentLibrary = () => {
                   <SheetHeader>
                     <SheetTitle>{t("library.filter.title")}</SheetTitle>
                     <SheetDescription>
-                      Filter content by type, category, and more
+                      유형, 카테고리 등으로 콘텐츠 필터링
                     </SheetDescription>
                   </SheetHeader>
                   
@@ -219,9 +216,13 @@ const ContentLibrary = () => {
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium">{t("library.filter.contentType")}</h4>
                       <div className="grid grid-cols-2 gap-2">
-                        {["video", "audio", "document", "presentation", "spreadsheet", "scorm"].map((type) => (
+                        {["video", "audio", "document", "presentation", "spreadsheet", "scorm", "other"].map((type) => (
                           <div key={type} className="flex items-center space-x-2">
-                            <Checkbox id={`type-${type}`} />
+                            <Checkbox 
+                              id={`type-${type}`} 
+                              checked={selectedTypes.includes(type as ContentType)}
+                              onCheckedChange={() => handleTypeCheckboxChange(type as ContentType)}
+                            />
                             <Label htmlFor={`type-${type}`} className="text-sm font-normal capitalize">
                               {type}
                             </Label>
@@ -235,14 +236,24 @@ const ContentLibrary = () => {
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium">{t("library.filter.category")}</h4>
                       <div className="space-y-2">
-                        {["Tutorials", "Best Practices", "Assessment", "Design", "Engagement"].map((category) => (
-                          <div key={category} className="flex items-center space-x-2">
-                            <Checkbox id={`category-${category}`} />
-                            <Label htmlFor={`category-${category}`} className="text-sm font-normal">
-                              {category}
-                            </Label>
-                          </div>
-                        ))}
+                        {isCategoriesLoading ? (
+                          <p className="text-sm text-muted-foreground">로딩 중...</p>
+                        ) : categories && categories.length > 0 ? (
+                          categories.map((category) => (
+                            <div key={category.id} className="flex items-center space-x-2">
+                              <Checkbox 
+                                id={`category-${category.id}`} 
+                                checked={selectedCategories.includes(category.id)}
+                                onCheckedChange={() => handleCategoryCheckboxChange(category.id)}
+                              />
+                              <Label htmlFor={`category-${category.id}`} className="text-sm font-normal">
+                                {category.name}
+                              </Label>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-muted-foreground">카테고리 없음</p>
+                        )}
                       </div>
                     </div>
                     
@@ -250,35 +261,39 @@ const ContentLibrary = () => {
                     
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium">{t("library.filter.date")}</h4>
-                      <RadioGroup defaultValue="any">
+                      <RadioGroup value={dateFilter} onValueChange={setDateFilter}>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="any" id="date-any" />
-                          <Label htmlFor="date-any" className="text-sm font-normal">Any time</Label>
+                          <Label htmlFor="date-any" className="text-sm font-normal">모든 기간</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="week" id="date-week" />
-                          <Label htmlFor="date-week" className="text-sm font-normal">Past week</Label>
+                          <Label htmlFor="date-week" className="text-sm font-normal">지난 주</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="month" id="date-month" />
-                          <Label htmlFor="date-month" className="text-sm font-normal">Past month</Label>
+                          <Label htmlFor="date-month" className="text-sm font-normal">지난 달</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="year" id="date-year" />
-                          <Label htmlFor="date-year" className="text-sm font-normal">Past year</Label>
+                          <Label htmlFor="date-year" className="text-sm font-normal">지난 해</Label>
                         </div>
                       </RadioGroup>
                     </div>
                     
                     <div className="flex justify-between pt-4">
-                      <Button variant="outline">{t("library.filter.clearAll")}</Button>
-                      <Button>{t("library.filter.apply")}</Button>
+                      <Button variant="outline" onClick={clearFilters}>
+                        {t("library.filter.clearAll")}
+                      </Button>
+                      <Button onClick={() => document.body.click()}>
+                        {t("library.filter.apply")}
+                      </Button>
                     </div>
                   </div>
                 </SheetContent>
               </Sheet>
               
-              <Select defaultValue="newest">
+              <Select value={sortOrder} onValueChange={setSortOrder}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder={t("library.sortBy")} />
                 </SelectTrigger>
@@ -313,31 +328,99 @@ const ContentLibrary = () => {
             </div>
           </div>
           
+          {/* Filter badges */}
+          {(selectedTypes.length > 0 || selectedCategories.length > 0 || searchQuery || dateFilter !== "any") && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {selectedTypes.map(type => (
+                <Badge key={type} variant="outline" className="bg-background flex items-center gap-1">
+                  {type}
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-4 w-4 ml-1 p-0"
+                    onClick={() => handleTypeCheckboxChange(type)}
+                  >
+                    ×
+                  </Button>
+                </Badge>
+              ))}
+              
+              {selectedCategories.map(categoryId => {
+                const category = categories?.find(c => c.id === categoryId);
+                return category ? (
+                  <Badge key={categoryId} variant="outline" className="bg-background flex items-center gap-1">
+                    {category.name}
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-4 w-4 ml-1 p-0"
+                      onClick={() => handleCategoryCheckboxChange(categoryId)}
+                    >
+                      ×
+                    </Button>
+                  </Badge>
+                ) : null;
+              })}
+              
+              {dateFilter !== "any" && (
+                <Badge variant="outline" className="bg-background flex items-center gap-1">
+                  {dateFilter === "week" ? "지난 주" : 
+                   dateFilter === "month" ? "지난 달" : 
+                   dateFilter === "year" ? "지난 해" : dateFilter}
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-4 w-4 ml-1 p-0"
+                    onClick={() => setDateFilter("any")}
+                  >
+                    ×
+                  </Button>
+                </Badge>
+              )}
+              
+              {searchQuery && (
+                <Badge variant="outline" className="bg-background flex items-center gap-1">
+                  검색: {searchQuery}
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-4 w-4 ml-1 p-0"
+                    onClick={() => setSearchQuery("")}
+                  >
+                    ×
+                  </Button>
+                </Badge>
+              )}
+              
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-xs h-7"
+                onClick={clearFilters}
+              >
+                모든 필터 지우기
+              </Button>
+            </div>
+          )}
+          
           {/* Content Tabs */}
-          <Tabs defaultValue="all" className="mb-8">
+          <Tabs 
+            defaultValue="all" 
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="mb-8"
+          >
             <TabsList>
               <TabsTrigger value="all">{t("library.allContent")}</TabsTrigger>
-              <TabsTrigger value="videos">Videos</TabsTrigger>
-              <TabsTrigger value="documents">Documents</TabsTrigger>
-              <TabsTrigger value="audio">Audio</TabsTrigger>
-              <TabsTrigger value="other">Other</TabsTrigger>
+              <TabsTrigger value="videos">비디오</TabsTrigger>
+              <TabsTrigger value="documents">문서</TabsTrigger>
+              <TabsTrigger value="audio">오디오</TabsTrigger>
+              <TabsTrigger value="other">기타</TabsTrigger>
             </TabsList>
-            
-            <div className="flex flex-wrap gap-2 mt-4">
-              <Badge variant="outline" className="bg-background flex items-center gap-1">
-                {t("common.allCategories")}
-                <Button variant="ghost" size="icon" className="h-4 w-4 ml-1 p-0">×</Button>
-              </Badge>
-              
-              <Badge variant="outline" className="bg-background flex items-center gap-1">
-                Tutorials
-                <Button variant="ghost" size="icon" className="h-4 w-4 ml-1 p-0">×</Button>
-              </Badge>
-            </div>
             
             {/* Content Grid/List */}
             <TabsContent value="all" className="mt-6">
-              {isLoading ? (
+              {isContentLoading ? (
                 viewMode === "grid" ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -378,9 +461,9 @@ const ContentLibrary = () => {
                       <Card key={content.id} className="hover-elevate overflow-hidden">
                         <div className="flex p-4">
                           <div className="w-24 h-16 bg-muted rounded-md mr-4 flex-shrink-0 overflow-hidden">
-                            {content.thumbnailUrl ? (
+                            {content.thumbnail_url ? (
                               <img 
-                                src={content.thumbnailUrl} 
+                                src={content.thumbnail_url} 
                                 alt={content.title} 
                                 className="w-full h-full object-cover"
                               />
@@ -405,7 +488,7 @@ const ContentLibrary = () => {
                             <h3 className="font-semibold text-base truncate">{content.title}</h3>
                             <p className="text-sm text-muted-foreground truncate">{content.description}</p>
                             <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                              <span>{new Date(content.uploadDate).toLocaleDateString()}</span>
+                              <span>{new Date(content.upload_date).toLocaleDateString()}</span>
                               <span className="flex items-center gap-1">
                                 <Play className="h-3 w-3" />
                                 {content.views}
@@ -435,46 +518,30 @@ const ContentLibrary = () => {
                   <File className="h-16 w-16 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-medium">{t("library.noContentFound")}</h3>
                   <p className="text-muted-foreground mb-4">
-                    Try adjusting your search or filters
+                    검색어나 필터를 조정해보세요
                   </p>
-                  <Button variant="outline" onClick={() => setSearchQuery("")}>
-                    Clear search
+                  <Button variant="outline" onClick={clearFilters}>
+                    필터 초기화
                   </Button>
                 </div>
               )}
             </TabsContent>
             
-            {/* Other tabs would follow the same pattern */}
+            {/* Other tabs - they share the same rendering logic with different filters */}
             <TabsContent value="videos" className="mt-6">
-              <div className="flex flex-col items-center justify-center py-12">
-                <p className="text-muted-foreground">
-                  Video content filter will be available soon
-                </p>
-              </div>
+              {/* Content will be filtered by the activeTab state */}
             </TabsContent>
             
             <TabsContent value="documents" className="mt-6">
-              <div className="flex flex-col items-center justify-center py-12">
-                <p className="text-muted-foreground">
-                  Document content filter will be available soon
-                </p>
-              </div>
+              {/* Content will be filtered by the activeTab state */}
             </TabsContent>
             
             <TabsContent value="audio" className="mt-6">
-              <div className="flex flex-col items-center justify-center py-12">
-                <p className="text-muted-foreground">
-                  Audio content filter will be available soon
-                </p>
-              </div>
+              {/* Content will be filtered by the activeTab state */}
             </TabsContent>
             
             <TabsContent value="other" className="mt-6">
-              <div className="flex flex-col items-center justify-center py-12">
-                <p className="text-muted-foreground">
-                  Other content filter will be available soon
-                </p>
-              </div>
+              {/* Content will be filtered by the activeTab state */}
             </TabsContent>
           </Tabs>
         </div>
