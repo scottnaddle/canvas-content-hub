@@ -13,7 +13,7 @@ import { formatFileSize } from "@/lib/i18n";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useStorage } from "@/hooks/useStorage";
-import { useAddContentItem, useCategories } from "@/hooks/useContent";
+import { useAddContentItem, useCategories } from "@/hooks/content";
 import { ContentType } from "@/types/content";
 import { v4 as uuidv4 } from "uuid";
 

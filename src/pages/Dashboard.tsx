@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PlusCircle, FileUp, Grid3X3, FileSpreadsheet, Upload } from "lucide-react";
@@ -11,7 +12,7 @@ import Footer from "@/components/layout/Footer";
 import { useLanguage } from "@/contexts/LanguageContext";
 import ContentCard from "@/components/content/ContentCard";
 import { useAuth } from "@/hooks/useAuth";
-import { useRecentContent, usePopularContent } from "@/hooks/useContent";
+import { useRecentContent, usePopularContent } from "@/hooks/content";
 import ContentUploader from "@/components/content/ContentUploader";
 
 const Dashboard = () => {

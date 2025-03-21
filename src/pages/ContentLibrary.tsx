@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Search, Filter, UploadCloud, Grid, List, FileText, Video, Music, File, Play, Download, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import ContentCard from "@/components/content/ContentCard";
 import ContentUploader from "@/components/content/ContentUploader";
 import { useAuth } from "@/hooks/useAuth";
-import { useContentItems, useCategories } from "@/hooks/useContent";
+import { useContentItems, useCategories } from "@/hooks/content";
 import { ContentType, ContentWithDetails } from "@/types/content";
 
 const ContentLibrary = () => {
