@@ -14,25 +14,10 @@ import {
 import ContentViewer from "./ContentViewer";
 import { formatFileSize } from "@/lib/i18n";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { ContentWithDetails } from "@/types/content";
 
 interface ContentCardProps {
-  content: {
-    id: string;
-    title: string;
-    description?: string;
-    type: "video" | "audio" | "document" | "presentation" | "spreadsheet" | "scorm" | "other";
-    thumbnailUrl?: string;
-    fileUrl?: string;
-    fileSize?: number;
-    duration?: number;
-    category?: string;
-    tags?: string[];
-    author?: string;
-    uploadDate: Date;
-    lastModified?: Date;
-    views?: number;
-    downloads?: number;
-  };
+  content: ContentWithDetails;
 }
 
 const ContentCard = ({ content }: ContentCardProps) => {
@@ -78,9 +63,9 @@ const ContentCard = ({ content }: ContentCardProps) => {
       <Card className="hover-elevate overflow-hidden">
         {/* Thumbnail */}
         <div className="aspect-video relative overflow-hidden">
-          {content.thumbnailUrl ? (
+          {content.thumbnail_url ? (
             <img 
-              src={content.thumbnailUrl} 
+              src={content.thumbnail_url} 
               alt={content.title} 
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
@@ -129,7 +114,7 @@ const ContentCard = ({ content }: ContentCardProps) => {
           )}
           
           <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-            <span>{new Date(content.uploadDate).toLocaleDateString()}</span>
+            <span>{new Date(content.upload_date).toLocaleDateString()}</span>
             
             {content.views !== undefined && (
               <span className="flex items-center gap-1">
@@ -138,9 +123,9 @@ const ContentCard = ({ content }: ContentCardProps) => {
               </span>
             )}
             
-            {content.fileSize !== undefined && (
+            {content.file_size !== undefined && (
               <span>
-                {formatFileSize(content.fileSize, currentLanguage as any)}
+                {formatFileSize(content.file_size, currentLanguage as any)}
               </span>
             )}
           </div>
@@ -191,7 +176,20 @@ const ContentCard = ({ content }: ContentCardProps) => {
             </DialogDescription>
           </DialogHeader>
           
-          <ContentViewer content={content} />
+          <ContentViewer content={{
+            id: content.id,
+            title: content.title,
+            description: content.description,
+            type: content.type,
+            thumbnailUrl: content.thumbnail_url,
+            fileUrl: content.file_url,
+            fileSize: content.file_size,
+            duration: content.duration,
+            uploadDate: new Date(content.upload_date),
+            views: content.views,
+            downloads: content.downloads,
+            tags: content.tags,
+          }} />
         </DialogContent>
       </Dialog>
     </>

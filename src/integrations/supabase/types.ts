@@ -154,6 +154,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      increment_content_downloads: {
+        Args: {
+          content_id: string
+        }
+        Returns: undefined
+      }
+      increment_content_views: {
+        Args: {
+          content_id: string
+        }
+        Returns: undefined
+      }
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean

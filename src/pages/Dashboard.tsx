@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PlusCircle, FileUp, Grid3X3, FileSpreadsheet, Upload } from "lucide-react";
@@ -26,7 +25,6 @@ const Dashboard = () => {
   const { data: popularContent, isLoading: isPopularLoading } = usePopularContent(3);
   
   useEffect(() => {
-    // Check if user is authenticated
     if (!isAuthLoading && !user) {
       toast({
         title: "인증 필요",
@@ -39,7 +37,6 @@ const Dashboard = () => {
   
   const isLoading = isAuthLoading || isRecentLoading;
   
-  // Stats for dashboard
   const statsCards = [
     {
       title: t("dashboard.totalContent"),
@@ -78,7 +75,6 @@ const Dashboard = () => {
       
       <main className="flex-1 py-16 pt-32">
         <div className="container px-4 mx-auto">
-          {/* Page Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">
@@ -94,7 +90,6 @@ const Dashboard = () => {
             </div>
           </div>
           
-          {/* Stats Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
             {statsCards.map((card, index) => (
               <Card key={index} className="hover-elevate">
@@ -118,9 +113,7 @@ const Dashboard = () => {
             ))}
           </div>
           
-          {/* Main Dashboard Content */}
           <div className="grid gap-4 md:grid-cols-7">
-            {/* Content tabs section - wider */}
             <Tabs defaultValue="recent" className="md:col-span-5">
               <div className="flex items-center justify-between mb-4">
                 <TabsList>
@@ -149,7 +142,10 @@ const Dashboard = () => {
                 ) : recentContent && recentContent.length > 0 ? (
                   <div className="grid gap-4 md:grid-cols-3">
                     {recentContent.map((content) => (
-                      <ContentCard key={content.id} content={content} />
+                      <ContentCard 
+                        key={content.id} 
+                        content={content} 
+                      />
                     ))}
                   </div>
                 ) : (
@@ -178,7 +174,10 @@ const Dashboard = () => {
                 ) : popularContent && popularContent.length > 0 ? (
                   <div className="grid gap-4 md:grid-cols-3">
                     {popularContent.map((content) => (
-                      <ContentCard key={content.id} content={content} />
+                      <ContentCard 
+                        key={content.id} 
+                        content={content} 
+                      />
                     ))}
                   </div>
                 ) : (
@@ -205,7 +204,6 @@ const Dashboard = () => {
               </TabsContent>
             </Tabs>
             
-            {/* Activity sidebar - narrower */}
             <div className="md:col-span-2">
               <Card>
                 <CardHeader>

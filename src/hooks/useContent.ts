@@ -182,7 +182,10 @@ export const useIncrementViews = () => {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data, error } = await supabase.rpc('increment_content_views', { content_id: id });
+      // Fix: Using rpc with the correct function name
+      const { data, error } = await supabase.rpc('increment_content_views', { 
+        content_id: id 
+      });
       
       if (error) {
         console.error("Error incrementing views:", error);
@@ -204,7 +207,10 @@ export const useIncrementDownloads = () => {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data, error } = await supabase.rpc('increment_content_downloads', { content_id: id });
+      // Fix: Using rpc with the correct function name
+      const { data, error } = await supabase.rpc('increment_content_downloads', { 
+        content_id: id 
+      });
       
       if (error) {
         console.error("Error incrementing downloads:", error);

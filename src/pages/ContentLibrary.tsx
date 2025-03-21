@@ -44,18 +44,15 @@ const ContentLibrary = () => {
   const [dateFilter, setDateFilter] = useState<string>("any");
   const [sortOrder, setSortOrder] = useState<string>("newest");
   
-  // Filter function
   const filterContent = (content: ContentWithDetails[]): ContentWithDetails[] => {
     if (!content) return [];
     
     return content.filter(item => {
-      // Text search filter
       const textMatch = 
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (item.tags && item.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())));
       
-      // Type filter
       const typeMatch = activeTab === "all" 
         ? true
         : (activeTab === "videos" && item.type === "video") ||
@@ -63,13 +60,11 @@ const ContentLibrary = () => {
           (activeTab === "audio" && item.type === "audio") || 
           (activeTab === "other" && !["video", "document", "audio"].includes(item.type));
       
-      // Advanced filters
       const advancedTypeMatch = selectedTypes.length === 0 || selectedTypes.includes(item.type);
       
       const advancedCategoryMatch = selectedCategories.length === 0 || 
         (item.category_id && selectedCategories.includes(item.category_id));
       
-      // Date filter
       let dateMatch = true;
       const now = new Date();
       const uploadDate = new Date(item.upload_date);
@@ -89,7 +84,6 @@ const ContentLibrary = () => {
     });
   };
   
-  // Sort function
   const sortContent = (content: ContentWithDetails[]): ContentWithDetails[] => {
     if (!content) return [];
     
@@ -115,7 +109,6 @@ const ContentLibrary = () => {
   
   const filteredContent = sortContent(filterContent(contentItems || []));
   
-  // Type icon function
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'video':
@@ -165,7 +158,6 @@ const ContentLibrary = () => {
       
       <main className="flex-1 py-16 pt-32">
         <div className="container px-4 mx-auto">
-          {/* Page Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">{t("library.title")}</h1>
@@ -184,7 +176,6 @@ const ContentLibrary = () => {
             </div>
           </div>
           
-          {/* Search and Filter Bar */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-grow">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -328,7 +319,6 @@ const ContentLibrary = () => {
             </div>
           </div>
           
-          {/* Filter badges */}
           {(selectedTypes.length > 0 || selectedCategories.length > 0 || searchQuery || dateFilter !== "any") && (
             <div className="flex flex-wrap gap-2 mb-4">
               {selectedTypes.map(type => (
@@ -403,7 +393,6 @@ const ContentLibrary = () => {
             </div>
           )}
           
-          {/* Content Tabs */}
           <Tabs 
             defaultValue="all" 
             value={activeTab}
@@ -418,7 +407,6 @@ const ContentLibrary = () => {
               <TabsTrigger value="other">기타</TabsTrigger>
             </TabsList>
             
-            {/* Content Grid/List */}
             <TabsContent value="all" className="mt-6">
               {isContentLoading ? (
                 viewMode === "grid" ? (
@@ -527,21 +515,16 @@ const ContentLibrary = () => {
               )}
             </TabsContent>
             
-            {/* Other tabs - they share the same rendering logic with different filters */}
             <TabsContent value="videos" className="mt-6">
-              {/* Content will be filtered by the activeTab state */}
             </TabsContent>
             
             <TabsContent value="documents" className="mt-6">
-              {/* Content will be filtered by the activeTab state */}
             </TabsContent>
             
             <TabsContent value="audio" className="mt-6">
-              {/* Content will be filtered by the activeTab state */}
             </TabsContent>
             
             <TabsContent value="other" className="mt-6">
-              {/* Content will be filtered by the activeTab state */}
             </TabsContent>
           </Tabs>
         </div>
