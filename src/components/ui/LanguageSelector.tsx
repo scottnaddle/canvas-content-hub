@@ -9,12 +9,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { LanguageCodeType } from "@/types";
 
 const LanguageSelector = () => {
   const [open, setOpen] = useState(false);
   const { currentLanguage, changeLanguage, t } = useLanguage();
   
-  const languages = [
+  const languages: { code: LanguageCodeType; name: string }[] = [
     { code: "en", name: "English" },
     { code: "ko", name: "한국어" },
     { code: "ru", name: "Русский" },

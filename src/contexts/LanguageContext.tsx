@@ -1,9 +1,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { LanguageCodeType } from "@/types";
 import enTranslations from "@/locales/en.json";
 import koTranslations from "@/locales/ko.json";
-
-type LanguageCodeType = "en" | "ko" | "ru" | "uz";
 
 interface TranslationsType {
   [key: string]: any;
@@ -33,16 +32,16 @@ const LanguageContext = createContext<LanguageContextType>({
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentLanguage, setCurrentLanguage] = useState<LanguageCodeType>(() => {
     // Get saved language from localStorage or use browser preferred language
-    const savedLanguage = localStorage.getItem("language") as LanguageCodeType;
+    const savedLanguage = localStorage.getItem("language") as LanguageCodeType | null;
     
     if (savedLanguage && Object.keys(translations).includes(savedLanguage)) {
       return savedLanguage;
     }
     
     // Try to detect browser language
-    const browserLang = navigator.language.split("-")[0] as LanguageCodeType;
-    if (Object.keys(translations).includes(browserLang)) {
-      return browserLang;
+    const browserLang = navigator.language.split("-")[0];
+    if (browserLang && ["en", "ko", "ru", "uz"].includes(browserLang)) {
+      return browserLang as LanguageCodeType;
     }
     
     return defaultLanguage;
