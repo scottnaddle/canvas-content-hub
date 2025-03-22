@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,23 +42,19 @@ const FilterSheet = ({
   const { t } = useLanguage();
 
   const handleTypeCheckboxChange = (type: ContentType) => {
-    setSelectedTypes(prev => {
-      if (prev.includes(type)) {
-        return prev.filter(t => t !== type);
-      } else {
-        return [...prev, type];
-      }
-    });
+    if (selectedTypes.includes(type)) {
+      setSelectedTypes(selectedTypes.filter(t => t !== type));
+    } else {
+      setSelectedTypes([...selectedTypes, type]);
+    }
   };
   
   const handleCategoryCheckboxChange = (categoryId: string) => {
-    setSelectedCategories(prev => {
-      if (prev.includes(categoryId)) {
-        return prev.filter(id => id !== categoryId);
-      } else {
-        return [...prev, categoryId];
-      }
-    });
+    if (selectedCategories.includes(categoryId)) {
+      setSelectedCategories(selectedCategories.filter(id => id !== categoryId));
+    } else {
+      setSelectedCategories([...selectedCategories, categoryId]);
+    }
   };
 
   return (
